@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NOTES OF HEART - v1.0.0</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      :root {
+        --bg: #0d0d0d;
+        --text-main: #fce4ec;
+        --text-sys: #666666;
+        --text-accent: #f48fb1;
+        --text-dim: #8d6e7a;
+        --border: #1a1a1a;
+        --header-bg: #0a0a0a;
+      }
+
+      html, body {
+        height: 100%;
+        background: var(--bg);
+        color: var(--text-main);
+        font-family: 'Courier New', 'Lucida Console', 'Courier Prime', monospace;
+        font-size: 14px;
+        line-height: 1.6;
+        overflow: hidden;
+      }
+
+      #terminal-wrapper {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        width: 100%;
+        max-width: 860px;
+        margin: 0 auto;
+        position: relative;
+      }
+
+      #header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: var(--header-bg);
+        border-bottom: 1px solid #1e1e1e;
+        padding: 10px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-shrink: 0;
+      }
+
+      #header .title {
+        color: var(--text-accent);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+
+      #header .controls {
+        display: flex;
+        gap: 8px;
+        z-index: 1;
+      }
+
+      #header .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        opacity: 0.6;
+      }
+
+      #header .dot.red   { background: #ff5f57; }
+      #header .dot.yellow { background: #ffbd2e; }
+      #header .dot.green  { background: #28c840; }
+
+      #lang-status {
+        color: var(--text-dim);
+        font-size: 11px;
+        letter-spacing: 1px;
+        z-index: 1;
+      }
+
+      #terminal-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px 24px 8px;
+        scroll-behavior: smooth;
+      }
+
+      #terminal-body::-webkit-scrollbar {
+        width: 4px;
+      }
+
+      #terminal-body::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      #terminal-body::-webkit-scrollbar-thumb {
+        background: #2a2a2a;
+        border-radius: 4px;
+      }
+
+      .line {
+        margin-bottom: 2px;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .line.sys {
+        color: var(--text-sys);
+        font-size: 12px;
+      }
+
+      .line.poem {
+        color: var(--text-main);
+        font-style: italic;
+        line-height: 2;
+        padding-left: 14px;
+        border-left: 1px solid #2a1a20;
+      }
+
+      .line.error {
+        color: #ef9a9a;
+      }
+
+      .line.info {
+        color: var(--text-dim);
+        font-size: 12px;
+      }
+
+      .line.spacer {
+        min-height: 10px;
+        display: block;
+      }
+
+      .line.header-art {
+        color: var(--text-accent);
+        font-size: 12px;
+        letter-spacing: 2px;
+        opacity: 0.3;
+      }
+
+      .line.lang-tag {
+        color: var(--text-dim);
+        font-size: 11px;
+        letter-spacing: 2px;
+        margin-bottom: 4px;
+      }
+
+      .prompt-char {
+        color: var(--text-dim);
+      }
+
+      .cmd-text {
+        color: var(--text-accent);
+      }
+
+      #input-row {
+        display: flex;
+        align-items: center;
+        padding: 10px 24px 16px;
+        flex-shrink: 0;
+        border-top: 1px solid #131313;
+      }
+
+      #prompt-label {
+        color: var(--text-dim);
+        white-space: nowrap;
+        user-select: none;
+        flex-shrink: 0;
+      }
+
+      #cmd-input {
+        background: transparent;
+        border: none;
+        outline: none;
+        color: var(--text-main);
+        font-family: inherit;
+        font-size: 14px;
+        flex: 1;
+        caret-color: var(--text-main);
+        padding: 0 0 0 6px;
+        width: 100%;
+      }
+
+      #cmd-input::selection {
+        background: #2a1a20;
+        color: var(--text-main);
+      }
+
+      #speaking-indicator {
+        position: fixed;
+        bottom: 62px;
+        right: 28px;
+        display: none;
+        align-items: center;
+        gap: 8px;
+        color: var(--text-dim);
+        font-size: 11px;
+        letter-spacing: 1px;
+        font-family: 'Courier New', monospace;
+      }
+
+      #speaking-indicator.active {
+        display: flex;
+        animation: pulse 2s ease-in-out infinite;
+      }
+
+      #speaking-indicator .bars {
+        display: flex;
+        align-items: flex-end;
+        gap: 2px;
+        height: 14px;
+      }
+
+      #speaking-indicator .bar {
+        width: 2px;
+        background: var(--text-dim);
+        border-radius: 1px;
+      }
+
+      #speaking-indicator .bar:nth-child(1) { height: 4px;  animation: soundbar 0.9s 0.0s ease-in-out infinite; }
+      #speaking-indicator .bar:nth-child(2) { height: 9px;  animation: soundbar 0.9s 0.1s ease-in-out infinite; }
+      #speaking-indicator .bar:nth-child(3) { height: 14px; animation: soundbar 0.9s 0.2s ease-in-out infinite; }
+      #speaking-indicator .bar:nth-child(4) { height: 9px;  animation: soundbar 0.9s 0.3s ease-in-out infinite; }
+      #speaking-indicator .bar:nth-child(5) { height: 4px;  animation: soundbar 0.9s 0.4s ease-in-out infinite; }
+
+      @keyframes soundbar {
+        0%, 100% { transform: scaleY(0.35); opacity: 0.4; }
+        50%       { transform: scaleY(1);    opacity: 1;   }
+      }
+
+      @keyframes pulse {
+        0%, 100% { opacity: 0.6; }
+        50%       { opacity: 1;   }
+      }
+
+      .typing-cursor {
+        display: inline-block;
+        width: 7px;
+        height: 13px;
+        background: var(--text-main);
+        animation: blink 1s step-end infinite;
+        vertical-align: text-bottom;
+        margin-left: 1px;
+      }
+
+      @keyframes blink {
+        0%, 100% { opacity: 1; }
+        50%       { opacity: 0; }
+      }
+    </style>
+    <meta property="og:image" content="https://bolt.new/static/og_default.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="https://bolt.new/static/og_default.png">
+</head>
+  <body>
+    <div id="terminal-wrapper">
+      <div id="header">
+        <div class="controls">
+          <div class="dot red"></div>
+          <div class="dot yellow"></div>
+          <div class="dot green"></div>
+        </div>
+        <div class="title">NOTES OF HEART &mdash; v1.0.0</div>
+        <div id="lang-status">LANG: EN</div>
+      </div>
+
+      <div id="terminal-body"></div>
+
+      <div id="input-row">
+        <span id="prompt-label">[user@heart&nbsp;~]$&nbsp;</span>
+        <input
+          type="text"
+          id="cmd-input"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+        />
+      </div>
+    </div>
+
+    <div id="speaking-indicator">
+      <div class="bars">
+        <div class="bar"></div>
+        <div class="bar"></div>
+        <div class="bar"></div>
+        <div class="bar"></div>
+        <div class="bar"></div>
+      </div>
+      <span>READING ALOUD</span>
+    </div>
+
+    <script>
+      const POEMS = {
+        en: {
+          label: 'ENGLISH',
+          text: "I wanted to be the closest you, by physical, by heart.\nI desired to be so so much that i snapped.\nIt felt as if you couldn't bother for my feelings as much as others.\nI felt it everywhere, it ran my blood cold.\nI cried, for what? you say.\nFor you.\nFor the minutes i couldn't hold you.\nFor the seats near me that missed you, even though you rarely sat next to me.\nI felt like a shadow, i felt overlooked.\nMaybe i was just insecure, maybe i had some rightful things.\nIt wasn't 'i felt like it', it bottled up over time.\nWhy? you say.\nYou are my muse.\nMy favorite fruit on the whole tree, my favorite shade of everycolor there is.\nBecause everytime i look at you, i see something beautiful.\nDifferent yet beautiful.\nI think i will miss you forever, even though im right by your side.\nLike the stars miss the sun in the morning sky.\nI see my future in your eyes.\nI love you, my little angel in disguise."
+        },
+        tr: {
+          label: 'TÜRKÇE',
+          text: "Senin en yakınında olmak istedim, bedenen ve kalben.\nBunu o kadar istedim ki, en sonunda koptum.\nHislerim elimde kalmış gibiydi, kalanların hisleri de sırtımda yük olmuştu.\nBunu her yerimde hissettim, kanım dondu.\nAğladım, ne için mi?\nSenin için.\nSana dokunamadığım o dakikalar için.\nYanımdaki, seni özleyen o boş sandalyeler için; ki aşırı nadirdi oturduğun zamanlar.\nBir gölge gibi hissettim, bakılıp geçilmiş.\nBelki sadece huzursuzdum, belki de biraz olsun haklıydım.\nBu 'içimden geldi' denecek bir şey değildi, zamanla içimde birikti.\nNeden mi bu kadar yoğun sana aşkım?\nÇünkü sen benim ilham perimsin.\nKoca ağaçtaki en sevdiğim meyve, var olan her rengin en sevdiğim tonusun.\nÇünkü sana her baktığımda, güzel başka bir şey görüyorum; farklı ama çok güzel.\nSanırım seni sonsuza dek özleyeceğim, tam yanında olsam bile.\nTıpkı yıldızların sabah gökyüzünde güneşi özlemesi gibi.\nGeleceğimi senin gözlerinde görüyorum.\nSeni seviyorum, benim küçük meleğim."
+        },
+        kr: {
+          label: '한국어',
+          text: "너와 가장 가깝고 싶었어, 몸도 마음도.\n너무나 갈망한 나머지 무너져 버렸지.\n내 감정은 다른 사람만큼 소중히 여기지 않는 것 같았어.\n온몸으로 느껴졌고, 피가 차갑게 식어버렸어.\n울었어, 무엇 때문에?\n너를 위해서.\n너를 안을 수 없었던 그 순간들을 위해.\n네가 내 옆에 앉는 일은 거의 없었지만, 너를 그리워한 내 옆자리들을 위해.\n그림자처럼 느껴졌고 외면당한 기분이었어.\n그냥 '기분 탓'이 아니었어, 시간이 흐르며 쌓여온 것이지.\n왜냐고?\n너는 나의 뮤즈니까.\n나무에서 내가 가장 좋아하는 열매니까.\n세상 모든 색깔 중 내가 가장 좋아하는 색조니까.\n네 곁에 있어도 영원히 너를 그리워할 것 같아, 아침 하늘의 별이 태양을 그리워하듯.\n네 눈 속에서 나의 미래를 봐.\n사랑해, 나의 숨겨진 작은 천사."
+        },
+        it: {
+          label: 'ITALIANO',
+          text: "Volevo esserti il più vicino possibile, nel corpo e nel cuore.\nLo desideravo così tanto che mi sono spezzata.\nSentivo che non ti curavi dei miei sentimenti quanto di quelli degli altri.\nHo pianto, per cosa?\nPer te.\nPer i posti vicino a me che sentivano la tua mancanza.\nMi sentivo come un'ombra, trascurata.\nPerché sei la mia musa.\nIl mio frutto preferito.\nOgni volta che ti guardo, vedo qualcosa di bello.\nVedo il mio futuro nei tuoi occhi.\nTi amo, mio piccolo angelo in incognito."
+        },
+        es: {
+          label: 'ESPAÑOL',
+          text: "Quería ser lo más cercano a ti, en cuerpo y alma.\nLo deseé tanto que me quebré.\nSentía que mis sentimientos no te importaban tanto como los de otros.\nLloré, ¿por qué?\nPor ti.\nPor los asientos a mi lado que te extrañaban.\nMe sentí como una sombra, me sentí ignorada.\nPorque eres mi musa.\nMi matiz favorito de cada color existente.\nCreo que te extrañaré por siempre, incluso estando a tu lado.\nVeo mi futuro en tus ojos.\nTe amo, mi pequeño ángel disfrazado."
+        },
+        zh: {
+          label: '中文',
+          text: "我想和你成为最亲近的人，无论是身体还是心灵。\n我如此渴望，以至于崩溃了。\n我觉得你并不在意我的感受。\n我全身都能感觉到，血液变得冰冷。\n我哭了，为了你。\n为了那些无法拥抱你的时刻。\n为了我身边那些思念你的座位。\n我像个影子，被忽视了。\n因为你是我的缪斯。\n我在你的眼中看到了我的未来。\n我爱你，我伪装的小天使。"
+        },
+        th: {
+          label: 'ภาษาไทย',
+          text: "ฉันอยากเป็นคนที่ใกล้ชิดกับคุณที่สุด ทั้งทางกายและทางใจ\nฉันปรารถนามันมากเสียจนฉันแตกสลาย\nฉันรู้สึกได้ทุกที่ มันทำให้เลือดของฉันเย็นเฉียบ\nฉันร้องไห้\nเพื่อคุณ\nเพื่อนาทีที่ฉันไม่ได้โอบกอดคุณ\nเพื่อที่นั่งข้างกายฉันที่คิดถึงคุณ\nฉันรู้สึกเหมือนเป็นเงา เหมือนถูกมองข้าม\nเพราะคุณคือแรงบันดาลใจของฉัน\nฉันเห็นอนาคตของฉันในดวงตาของคุณ\nรักคุณ เทพบุตรตัวน้อยในร่างจำแลงของฉัน"
+        }
+      };
+
+      const LANG_CODES = { en: 'en', tr: 'tr', kr: 'ko', it: 'it', es: 'es', zh: 'zh', th: 'th' };
+
+      let currentLang   = 'en';
+      let isTyping      = false;
+      let audioUnlocked = false;
+      let cmdHistory    = [];
+      let historyIndex  = -1;
+
+      const body       = document.getElementById('terminal-body');
+      const input      = document.getElementById('cmd-input');
+      const speakEl    = document.getElementById('speaking-indicator');
+      const langStatus = document.getElementById('lang-status');
+
+      function scrollBottom() {
+        body.scrollTop = body.scrollHeight;
+      }
+
+      function addLine(text, cls) {
+        const el = document.createElement('div');
+        el.className = 'line' + (cls ? ' ' + cls : '');
+        el.textContent = text;
+        body.appendChild(el);
+        scrollBottom();
+        return el;
+      }
+
+      function addSpacer() {
+        const el = document.createElement('div');
+        el.className = 'line spacer';
+        body.appendChild(el);
+        scrollBottom();
+      }
+
+      function wait(ms) {
+        return new Promise(r => setTimeout(r, ms));
+      }
+
+      function typeText(text, cls, charMs) {
+        return new Promise(resolve => {
+          const el = document.createElement('div');
+          el.className = 'line' + (cls ? ' ' + cls : '');
+          body.appendChild(el);
+
+          const cursor = document.createElement('span');
+          cursor.className = 'typing-cursor';
+          el.appendChild(cursor);
+
+          const chars = Array.from(text);
+          let i = 0;
+
+          function tick() {
+            if (i < chars.length) {
+              cursor.insertAdjacentText('beforebegin', chars[i++]);
+              scrollBottom();
+              setTimeout(tick, charMs != null ? charMs : (Math.random() * 22 + 16));
+            } else {
+              cursor.remove();
+              scrollBottom();
+              resolve();
+            }
+          }
+          tick();
+        });
+      }
+
+      function unlockAudio() {
+        if (audioUnlocked) return;
+        const u = new SpeechSynthesisUtterance('');
+        u.volume = 0;
+        window.speechSynthesis.speak(u);
+        audioUnlocked = true;
+      }
+
+      function speakText(text, lang) {
+        window.speechSynthesis.cancel();
+        setTimeout(() => {
+          const voices   = window.speechSynthesis.getVoices();
+          const langCode = LANG_CODES[lang] || 'en';
+          let voice = voices.find(v => v.lang.toLowerCase().startsWith(langCode));
+          if (!voice) voice = voices.find(v => v.lang.toLowerCase().startsWith('en'));
+
+          const utter   = new SpeechSynthesisUtterance(text);
+          utter.pitch   = 1.1;
+          utter.rate    = 0.8;
+          utter.volume  = 1;
+          if (voice) utter.voice = voice;
+
+          speakEl.classList.add('active');
+          utter.onend  = () => speakEl.classList.remove('active');
+          utter.onerror = () => speakEl.classList.remove('active');
+          window.speechSynthesis.speak(utter);
+        }, 150);
+      }
+
+      function escHtml(s) {
+        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      }
+
+      async function handleILoveYou() {
+        isTyping = true;
+        input.disabled = true;
+
+        const poem = POEMS[currentLang];
+        await typeText('// ' + poem.label, 'lang-tag', 20);
+        await wait(280);
+
+        const lines = poem.text.split('\n');
+        for (const line of lines) {
+          await typeText(line, 'poem', 26);
+          await wait(80);
+        }
+
+        addSpacer();
+        await typeText('— Notes of Heart', 'sys', 20);
+        addSpacer();
+
+        isTyping = false;
+        input.disabled = false;
+        input.focus();
+
+        speakText(poem.text.replace(/\n/g, ' '), currentLang);
+      }
+
+      async function handleChange(lang) {
+        const valid = Object.keys(POEMS);
+        if (!valid.includes(lang)) {
+          await typeText("unknown language: '" + lang + "'", 'error', 20);
+          await wait(60);
+          await typeText('available: ' + valid.join(', '), 'info', 18);
+          addSpacer();
+          return;
+        }
+        currentLang = lang;
+        langStatus.textContent = 'LANG: ' + lang.toUpperCase();
+        await typeText('language set to ' + POEMS[lang].label, 'sys', 20);
+        await wait(60);
+        await typeText("type 'ILOVEYOU' to read the poem.", 'info', 18);
+        addSpacer();
+      }
+
+      async function handleHelp() {
+        const cmds = [
+          ['ILOVEYOU',      'read & narrate the poem in current language'],
+          ['change [lang]', 'switch language: en, tr, kr, it, es, zh, th'],
+          ['clear',         'clear the terminal screen'],
+          ['help',          'show this help message'],
+        ];
+        for (const [name, desc] of cmds) {
+          const el = document.createElement('div');
+          el.className = 'line sys';
+          el.innerHTML =
+            '  <span style="color:#f48fb1;display:inline-block;min-width:160px">' + escHtml(name) + '</span>' +
+            '<span style="color:#555">' + escHtml(desc) + '</span>';
+          body.appendChild(el);
+          await wait(55);
+          scrollBottom();
+        }
+        addSpacer();
+      }
+
+      async function runCommand(raw) {
+        const cmd = raw.trim();
+        if (!cmd) return;
+
+        cmdHistory.unshift(cmd);
+        if (cmdHistory.length > 60) cmdHistory.pop();
+        historyIndex = -1;
+
+        const echo = document.createElement('div');
+        echo.className = 'line';
+        echo.innerHTML =
+          '<span class="prompt-char">[user@heart&nbsp;~]$</span> ' +
+          '<span class="cmd-text">' + escHtml(cmd) + '</span>';
+        body.appendChild(echo);
+        addSpacer();
+        scrollBottom();
+
+        const upper  = cmd.toUpperCase();
+        const parts  = cmd.toLowerCase().split(/\s+/);
+
+        if (upper === 'ILOVEYOU') {
+          await handleILoveYou();
+        } else if (parts[0] === 'change' && parts[1]) {
+          await handleChange(parts[1]);
+        } else if (upper === 'CLEAR') {
+          body.innerHTML = '';
+          await printBoot(false);
+        } else if (upper === 'HELP') {
+          await handleHelp();
+        } else {
+          await typeText('command not found: ' + cmd, 'error', 20);
+          await wait(60);
+          await typeText("type 'help' for available commands.", 'info', 18);
+          addSpacer();
+        }
+      }
+
+      async function printBoot(animate) {
+        addLine('  \u2665   \u2665   \u2665   \u2665   \u2665   \u2665   \u2665   \u2665   \u2665   \u2665   \u2665   \u2665', 'header-art');
+        addSpacer();
+
+        if (animate) {
+          await typeText('Welcome to Notes of Heart.', 'sys', 22);
+          await wait(220);
+          await typeText('A terminal for words left unspoken.', 'sys', 18);
+          await wait(220);
+          addSpacer();
+          await typeText("type 'ILOVEYOU' to begin.", 'info', 18);
+          await wait(80);
+          await typeText("type 'help' for all commands.", 'info', 18);
+        } else {
+          addLine('Welcome to Notes of Heart.', 'sys');
+          addLine('A terminal for words left unspoken.', 'sys');
+          addSpacer();
+          addLine("type 'ILOVEYOU' to begin.", 'info');
+          addLine("type 'help' for all commands.", 'info');
+        }
+        addSpacer();
+      }
+
+      input.addEventListener('keydown', async e => {
+        if (e.key === 'Enter') {
+          if (isTyping) return;
+          const val = input.value;
+          input.value = '';
+          await runCommand(val);
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          if (historyIndex < cmdHistory.length - 1) {
+            historyIndex++;
+            input.value = cmdHistory[historyIndex];
+            setTimeout(() => input.setSelectionRange(input.value.length, input.value.length), 0);
+          }
+        } else if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          if (historyIndex > 0) {
+            historyIndex--;
+            input.value = cmdHistory[historyIndex];
+          } else {
+            historyIndex = -1;
+            input.value = '';
+          }
+        }
+      });
+
+      document.addEventListener('click', () => {
+        unlockAudio();
+        input.focus();
+      });
+
+      if ('onvoiceschanged' in window.speechSynthesis) {
+        window.speechSynthesis.onvoiceschanged = () => {};
+      }
+
+      (async () => {
+        await wait(250);
+        await printBoot(true);
+        input.focus();
+      })();
+    </script>
+  </body>
+</html>
